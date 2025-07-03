@@ -1,0 +1,76 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            ext: ''
+          - os: linux
+            arch: arm64
+            ext: ''
+          - os: windows
+            arch: amd64
+            ext: '.exe'
+          - os: darwin
+            arch: amd64
+            ext: ''
+          - os: darwin
+            arch: arm64
+            ext: ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.1'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w" -o bin/opnsense-auto-dns${{ matrix.ext }} .
+          tar -czf opnsense-auto-dns-${{ matrix.os }}-${{ matrix.arch }}.tar.gz bin/opnsense-auto-dns${{ matrix.ext }} config.example.json README.md
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: opnsense-auto-dns-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            opnsense-auto-dns-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+            bin/opnsense-auto-dns${{ matrix.ext }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            **/opnsense-auto-dns-*.tar.gz
+            **/opnsense-auto-dns
+            **/opnsense-auto-dns.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
