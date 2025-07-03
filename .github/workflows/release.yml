@@ -67,8 +67,6 @@ jobs:
         with:
           files: |
             **/opnsense-auto-dns-*.tar.gz
-            **/opnsense-auto-dns
-            **/opnsense-auto-dns.exe
           generate_release_notes: true
           draft: false
           prerelease: false
